@@ -3,10 +3,18 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine.UI;
 
+
+public interface IUIPanel
+{
+	//void Open();
+	//void Close();
+	void SetGlobalListener(StateEventHub.IListenerProtocol listener);
+}
+
 /// <summary>
 /// Base class for all UI panels
 /// </summary>
-public abstract partial class BaseUIPanel : MonoBehaviour
+public abstract partial class BaseUIPanel : MonoBehaviour, IUIPanel
 {
 	// Constants
 
@@ -24,6 +32,8 @@ public abstract partial class BaseUIPanel : MonoBehaviour
 	bool            m_initialized   = false;
 	bool            m_smInit        = false;
 
+	StateEventHub.IListenerProtocol m_globalListener;
+
 	StateMachine    m_uiStates;
 	StateEventHub   m_internalStateEventHub;
 	StateEventHub.IListenerProtocol m_internalListener;
@@ -32,6 +42,11 @@ public abstract partial class BaseUIPanel : MonoBehaviour
 
 	CanvasGroup     m_canvasGroup;
 
+
+	/// <summary>
+	/// previous state name that this dialog transitioned from
+	/// </summary>
+	protected string	previousDialogStateID { get; private set; }
 
 	/// <summary>
 	/// whole panel alpha
@@ -157,9 +172,28 @@ public abstract partial class BaseUIPanel : MonoBehaviour
 	//
 
 	/// <summary>
+	/// event listener from UIManagers
+	/// </summary>
+	/// <param name="listener"></param>
+	public void SetGlobalListener(StateEventHub.IListenerProtocol listener)
+	{
+		m_globalListener	= listener;
+
+		m_globalListener.stateEntered   += (machineid, stateid) =>
+		{
+			previousDialogStateID   = listener.prevStateID;
+			Open();
+		};
+		m_globalListener.stateLeaved    += (machineid, stateid) =>
+		{
+			Close();
+		};
+	}
+
+	/// <summary>
 	/// Open this panel
 	/// </summary>
-	public void Open()
+	void Open()
 	{
 		InternalStateSetup();					// check if state machine is not initialized
 
@@ -184,7 +218,7 @@ public abstract partial class BaseUIPanel : MonoBehaviour
 	/// <summary>
 	/// Close this panel
 	/// </summary>
-	public void Close()
+	void Close()
 	{
 		InternalStateSetup();                   // check if state machine is not initialized
 

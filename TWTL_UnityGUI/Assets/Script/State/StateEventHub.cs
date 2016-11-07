@@ -37,6 +37,8 @@ public class StateEventHub
 		event StateEventDelegate    stateEntered;
 		event StateEventDelegate	stateLeaved;
 
+		string prevStateID { get; }
+
 		/// <summary>
 		/// Setup filter for this listener. as default, filter never accepts any states from any machines.
 		/// </summary>
@@ -70,6 +72,7 @@ public class StateEventHub
 
 	private class ListenerProtocolImpl : IListenerProtocol
 	{
+
 		private class FilterImpl
 		{
 			public FilterType		filterType	= FilterType.Never;
@@ -78,7 +81,7 @@ public class StateEventHub
 			public void SetupStateIDs(string [] ids)
 			{
 				stateIDs.Clear();
-				var count   = 0;
+				var count   = ids.Length;
 				for(var i = 0; i < count; i++)
 				{
 					stateIDs.Add(ids[i]);
@@ -112,6 +115,8 @@ public class StateEventHub
 
 		public event StateEventDelegate    stateEntered;
 		public event StateEventDelegate    stateLeaved;
+
+		public string prevStateID { get; set; }
 
 		public ListenerProtocolImpl()
 		{
@@ -183,8 +188,10 @@ public class StateEventHub
 		var count       = m_stateListeners.Count;
 		for(var i = 0; i < count; i++)
 		{
-			var listener    = m_stateListeners[i];
+			var listener			= m_stateListeners[i];
+
 			listener.CallStateLeave(machine, from);
+			listener.prevStateID    = from;
 			listener.CallStateEnter(machine, to);
 		}
 	}

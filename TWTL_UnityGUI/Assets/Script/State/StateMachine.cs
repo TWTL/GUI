@@ -222,12 +222,14 @@ public class StateMachine
 		}
 		else
 		{
-			if (m_eventProtocol != null)				// Sending state change event if there's an assigned event hub
+			var oldStateID      = m_currentState.stateID;
+			m_currentState		= to as State;              // Actual state change
+			if (m_eventProtocol != null)					// Sending state change event if there's an assigned event hub
 			{
-				m_eventProtocol.ReportStateChange(m_currentState.stateID, to.stateID);
+				m_eventProtocol.ReportStateChange(oldStateID, m_currentState.stateID);
 			}
 
-			m_currentState  = to as State;				// Actual state change
+			
 			return true;
 		}
 	}

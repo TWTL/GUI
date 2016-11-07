@@ -133,7 +133,10 @@ public abstract partial class BaseUIPanel : MonoBehaviour
 
 	public class FadeIn : BaseUITransition<BaseUIPanel>
 	{
-		public FadeIn(BaseUIPanel target) : base(target) { }
+		public FadeIn(BaseUIPanel target) : base(target)
+		{
+			duration    = 0.5f;
+		}
 
 		float       m_startAlpha;
 
@@ -150,7 +153,10 @@ public abstract partial class BaseUIPanel : MonoBehaviour
 
 	public class FadeOut : BaseUITransition<BaseUIPanel>
 	{
-		public FadeOut(BaseUIPanel target) : base(target) { }
+		public FadeOut(BaseUIPanel target) : base(target)
+		{
+			duration    = 0.5f;
+		}
 
 		float       m_startAlpha;
 

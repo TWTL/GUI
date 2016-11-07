@@ -13,17 +13,34 @@ public class TGComModule : BaseSingleton<TGComModule>
 	[SerializeField]
 	int             m_portNumber	= 12345;
 
+	/// <summary>
+	/// TEMP
+	/// </summary>
+	string localAddress
+	{
+		get
+		{
+			return "127.0.0.1";
+		}
+	}
+
 
 
 	// Members
-	TGTCPConnection     m_connection;
+	TGTCPClientConnection	m_reqConnection;
+	TGTCPServerConnection   m_trapConnection;
+
+
+	public event System.Action<string> reqMessageReceived;
+	public event System.Action<string> trapMessageReceived;
 
 	
 	protected override void Initialize()
 	{
 		base.Initialize();
 
-		m_connection    = new TGTCPConnection();
+		m_reqConnection		= new TGTCPClientConnection();
+		m_trapConnection    = new TGTCPServerConnection();
 	}
 
 	void Start()
@@ -42,19 +59,19 @@ public class TGComModule : BaseSingleton<TGComModule>
 
 	IEnumerator co_MainCycle()
 	{
-		// Establishing Connection
+		// Establishing Connection (Request)
 
-		var conInfo = new TGTCPConnection.ConnectionInfo() { hostIP = System.Net.IPAddress.Parse(m_serverAddress), port = m_portNumber };
-		m_connection.Make(conInfo);
+		var conInfo = new TGTCPClientConnection.ConnectionInfo() { hostIP = System.Net.IPAddress.Parse(m_serverAddress), port = m_portNumber };
+		m_reqConnection.Make(conInfo);
 
-		while (m_connection.connectionStatus == TGTCPConnection.ConnectionStatus.Trying)    // pending until connection state changes
+		while (m_reqConnection.connectionStatus == TGTCPClientConnection.ConnectionStatus.Waiting)    // pending until connection state changes
 			yield return null;
 
-		if (m_connection.connectionStatus == TGTCPConnection.ConnectionStatus.None)
+		if (m_reqConnection.connectionStatus == TGTCPClientConnection.ConnectionStatus.None)
 		{
-			if (m_connection.PollError() == TGTCPConnection.ErrorCode.CannotConnect)
+			if (m_reqConnection.PollError() == TGTCPClientConnection.ErrorCode.CannotConnect)
 			{
-				Debug.LogWarning("cannot connect!");
+				Debug.LogWarning("cannot connect to server!");
 			}
 			else
 			{
@@ -64,27 +81,103 @@ public class TGComModule : BaseSingleton<TGComModule>
 			yield break;
 		}
 
+		// Establishing Connection (Trap)
+
+		Debug.Log("start listening trap connection");
+		var trConInfo   = new TGTCPServerConnection.ConnectionInfo() { hostIP = System.Net.IPAddress.Parse(localAddress) };
+		trConInfo.AllocateAvailablePort();
+		m_trapConnection.Make(trConInfo);
+
+		Debug.Log("sending port number : " + trConInfo.port);
+		// notice server the trap socket's port number
+		m_reqConnection.Send(System.Text.Encoding.UTF8.GetBytes(trConInfo.port.ToString()));
+		
+		while (m_trapConnection.connectionStatus == TGTCPServerConnection.ConnectionStatus.Waiting)    // pending until connection state changes
+		{
+			m_reqConnection.Update();
+			m_trapConnection.Update();
+			yield return null;
+		}
+
+		if (m_trapConnection.connectionStatus == TGTCPServerConnection.ConnectionStatus.None)
+		{
+			if (m_trapConnection.PollError() == TGTCPServerConnection.ErrorCode.CannotConnect)
+			{
+				Debug.LogWarning("cannot accept connection from server!");
+			}
+			else
+			{
+				Debug.LogWarning("uh.... something is strange...");
+			}
+
+			yield break;
+		}
+
+
+
+		Debug.Log("connection established!");
+
 		// Typical receive / send loop
 
-		while(true)
+		while (true)
 		{
-			if (m_connection.PollError() != TGTCPConnection.ErrorCode.NoError)
+			var reqerror    = m_reqConnection.PollError();
+			var traperror   = m_trapConnection.PollError();
+			var errorRecv   = false;
+
+			if (reqerror != TGTCPClientConnection.ErrorCode.NoError)
 			{
-				m_connection.Kill();
+				Debug.LogWarning("request socket error : " + reqerror.ToString());
+				errorRecv   = true;
+			}
+
+			if (traperror != TGTCPServerConnection.ErrorCode.NoError)
+			{
+				Debug.LogWarning("trap socket error : " + traperror.ToString());
+				errorRecv   = true;
+			}
+
+			if (errorRecv)
+			{
+				m_reqConnection.Kill();
+				m_trapConnection.Kill();
 				continue;
+
+				// TODO : process after disconnection
 			}
 
-			m_connection.Update();
-
-			var read    = m_connection.PollData();
-			if (read != null)
+			// req connection
 			{
-				var text	= System.Text.Encoding.UTF8.GetString(read, 0, read.Length);
-				Debug.Log("received : " + text);
+				m_reqConnection.Update();
 
-				m_connection.Send(System.Text.Encoding.UTF8.GetBytes("I sent something to you! " + Random.Range(1, 10000)));
+				var read    = m_reqConnection.PollData();
+				if (read != null)
+				{
+					var text    = System.Text.Encoding.UTF8.GetString(read, 0, read.Length);
+					//Debug.Log("received (req) : " + text);
+
+					if (reqMessageReceived != null)
+						reqMessageReceived(text);
+					//m_reqConnection.Send(System.Text.Encoding.UTF8.GetBytes("I sent something to you! " + Random.Range(1, 10000)));
+				}
 			}
-			
+
+			// trap connection
+			{
+				m_trapConnection.Update();
+
+				var read    = m_trapConnection.PollData();
+				if (read != null)
+				{
+					var text    = System.Text.Encoding.UTF8.GetString(read, 0, read.Length);
+					//Debug.Log("received (trap) : " + text);
+
+					if (trapMessageReceived != null)
+						trapMessageReceived(text);
+					//m_trapConnection.Send(System.Text.Encoding.UTF8.GetBytes("I sent something to you! " + Random.Range(1, 10000)));
+				}
+			}
+
 			yield return null;
 		}
 	}
@@ -92,6 +185,18 @@ public class TGComModule : BaseSingleton<TGComModule>
 	void OnDestroy()
 	{
 		Debug.Log("TGComModule quit");
-		m_connection.Kill();
+		m_reqConnection.Kill();
+		m_trapConnection.Kill();
+	}
+
+
+	public void SendRequest(string message)
+	{
+		m_reqConnection.Send(System.Text.Encoding.UTF8.GetBytes(message));
+	}
+
+	public void SendTrapResponse(string message)
+	{
+		m_trapConnection.Send(System.Text.Encoding.UTF8.GetBytes(message));
 	}
 }

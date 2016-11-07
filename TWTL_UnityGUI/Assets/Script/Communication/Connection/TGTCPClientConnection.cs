@@ -8,7 +8,7 @@ using System.Collections.Generic;
 /// <summary>
 /// TCP implementation of TGBaseConnection
 /// </summary>
-public class TGTCPConnection : TGBaseConnection<TGTCPConnection.ConnectionInfo>
+public class TGTCPClientConnection : TGBaseClientConnection<TGTCPClientConnection.ConnectionInfo>
 {
 	/// <summary>
 	/// parameter structure used when making a connection
@@ -22,10 +22,10 @@ public class TGTCPConnection : TGBaseConnection<TGTCPConnection.ConnectionInfo>
 
 	class ConnectStateObject
 	{
-		public TGTCPConnection	connection;
+		public TGTCPClientConnection	connection;
 		public Socket			socket;
 
-		public ConnectStateObject(TGTCPConnection connection)
+		public ConnectStateObject(TGTCPClientConnection connection)
 		{
 			this.connection = connection;
 			this.socket     = connection.m_socket;
@@ -34,10 +34,10 @@ public class TGTCPConnection : TGBaseConnection<TGTCPConnection.ConnectionInfo>
 
 	class SendStateObject
 	{
-		public TGTCPConnection  connection;
+		public TGTCPClientConnection  connection;
 		public Socket           socket;
 
-		public SendStateObject(TGTCPConnection connection)
+		public SendStateObject(TGTCPClientConnection connection)
 		{
 			this.connection = connection;
 			this.socket     = connection.m_socket;
@@ -49,67 +49,32 @@ public class TGTCPConnection : TGBaseConnection<TGTCPConnection.ConnectionInfo>
 	/// </summary>
 	class ReceiveStateObject
 	{
-		public TGTCPConnection	connection;
+		public TGTCPClientConnection	connection;
 		public Socket			socket;
-		public const int		bufferSize	= 1024;
 
-		List<byte[]>        m_bufferList    = new List<byte[]>();
+		ReceiveBuffer           recvBuffer;
 
-		public byte[]	lastBuffer
+		public int bufferSize
 		{
-			get { return m_bufferList[m_bufferList.Count-1]; }
+			get { return recvBuffer.bufferSize; }
 		}
 
-		public ReceiveStateObject(TGTCPConnection connection)
+		public ReceiveStateObject(TGTCPClientConnection connection)
 		{
 			this.connection = connection;
 			this.socket     = connection.m_socket;
+
+			recvBuffer      = new ReceiveBuffer();
 		}
 
-		/// <summary>
-		/// allocate additional buffer and return
-		/// </summary>
-		/// <returns></returns>
 		public byte[] AllocateNewBuffer()
 		{
-			var buffer      = new byte[bufferSize];
-			m_bufferList.Add(buffer);
-			return buffer;
+			return recvBuffer.AllocateNewBuffer();
 		}
 
-		/// <summary>
-		/// Combine and truncate all buffers into one big buffer. awares null termination character
-		/// </summary>
-		/// <returns></returns>
 		public byte[] GetCombinedBuffer()
 		{
-			var bufferCount = m_bufferList.Count;
-			if (bufferCount == 0)									// if there is no buffer...
-				return new byte[] { 0 };
-
-			var size		= (bufferCount - 1) * bufferSize;       // Assuming that only the last one has null termination character.
-			var lastbuf     = m_bufferList[bufferCount - 1];
-			var nullIndex   = 0;
-			for (; nullIndex < bufferSize; nullIndex++)				// search for a null character
-			{
-				if (lastbuf[nullIndex] == 0)						// break the loop if we get the index of a null char.
-					break;
-			}
-			size            += nullIndex;                           // total data size, ends right before the null character.
-
-			var combuf      = new byte[size];
-			var writeInd    = 0;
-			for (var i = 0; i < bufferCount - 1; i++)				// copying data to new buffer
-			{
-				m_bufferList[i].CopyTo(combuf, writeInd);
-				writeInd    += bufferSize;
-			}
-
-			Array.Copy(lastbuf, 0, combuf, writeInd, nullIndex);	// copying last buffer
-
-			m_bufferList.Clear();									// flush the buffer list
-
-			return combuf;
+			return recvBuffer.GetCombinedBuffer();
 		}
 	}
 	//
@@ -140,7 +105,7 @@ public class TGTCPConnection : TGBaseConnection<TGTCPConnection.ConnectionInfo>
 		try
 		{
 			socket.EndConnect(conar);
-			self.SetConnectionEstablished();            // if no exception occurs, this will be excuted
+			self.SetConnectionEstablished();            // if no exception occurs, this will be executed
 
 			ReceiveChainStart(self, socket);			// start new receive chain
 		}
@@ -151,10 +116,10 @@ public class TGTCPConnection : TGBaseConnection<TGTCPConnection.ConnectionInfo>
 		}
 	}
 
-	private static void ReceiveChainStart(TGTCPConnection self, Socket socket)
+	private static void ReceiveChainStart(TGTCPClientConnection self, Socket socket)
 	{
 		var readso  = new ReceiveStateObject(self);
-		socket.BeginReceive(readso.AllocateNewBuffer(), 0, ReceiveStateObject.bufferSize, SocketFlags.None, ReceiveChainCallback, readso);
+		socket.BeginReceive(readso.AllocateNewBuffer(), 0, readso.bufferSize, SocketFlags.None, ReceiveChainCallback, readso);
 	}
 
 	private static void ReceiveChainCallback(IAsyncResult ar)
@@ -168,11 +133,17 @@ public class TGTCPConnection : TGBaseConnection<TGTCPConnection.ConnectionInfo>
 		try
 		{
 			var bytesRead   = socket.EndReceive(ar);
-			if (bytesRead == ReceiveStateObject.bufferSize)	// continue another receive chain, because there might be more data incoming
+
+			if (bytesRead == 0)						// if receives zero data, assume this is due to disconnection
+			{
+				Debug.LogWarning("disconnected!");
+				self.PushErrorCode(ErrorCode.Disconnected);
+			}
+			else if (bytesRead == stateObject.bufferSize)	// continue another receive chain, because there might be more data incoming
 			{
 				Debug.Log("ReceiveChain continues...");
 
-				socket.BeginReceive(stateObject.AllocateNewBuffer(), 0, ReceiveStateObject.bufferSize, SocketFlags.None, ReceiveChainCallback, stateObject);
+				socket.BeginReceive(stateObject.AllocateNewBuffer(), 0, stateObject.bufferSize, SocketFlags.None, ReceiveChainCallback, stateObject);
 			}
 			else
 			{                                       // all the data has arrived.
@@ -215,7 +186,8 @@ public class TGTCPConnection : TGBaseConnection<TGTCPConnection.ConnectionInfo>
 
 		try
 		{
-			var bytesSent   = socket.EndSend(ar);
+			//var bytesSent   = socket.EndSend(ar);
+			socket.EndSend(ar);
 		}
 		catch(Exception e)
 		{
