@@ -27,14 +27,33 @@ public class TGComModule : BaseSingleton<TGComModule>
 
 
 	// Members
-	TGTCPClientConnection	m_reqConnection;
-	TGTCPServerConnection   m_trapConnection;
-
-
-	public event System.Action<string> reqMessageReceived;
-	public event System.Action<string> trapMessageReceived;
-
+	TGTCPClientConnection				m_reqConnection;
+	TGTCPServerConnection				m_trapConnection;
 	
+	public event System.Action<string>	reqMessageReceived;
+	public event System.Action<string>	trapMessageReceived;
+
+
+	/// <summary>
+	/// auto-generated trap socket port number
+	/// </summary>
+	public int trapPort { get; private set; }
+
+	public enum Status
+	{
+		NotConnected,
+		Connecting,
+		RequestChannelOpen,
+		TrapChannelConnecting,
+		FullChannelOpen,
+		Closed,
+
+		ConnectionFailed = -1,
+	}
+
+	public Status status { get; private set; }
+
+
 	protected override void Initialize()
 	{
 		base.Initialize();
@@ -45,24 +64,33 @@ public class TGComModule : BaseSingleton<TGComModule>
 
 	void Start()
 	{
-		// TEST
-		StartRoutine();
+
+	}
+	
+	public void StartRequestConnection(System.Action<Status> completeDel)
+	{
+		StartCoroutine(co_MakeRequestConnection(completeDel));
 	}
 
-	/// <summary>
-	/// 
-	/// </summary>
-	public void StartRoutine()
+	public void StartTrapConnection(System.Action<Status> completeDel)
 	{
-		StartCoroutine(co_MainCycle());
+		StartCoroutine(co_MakeTrapConnection(completeDel));
 	}
 
-	IEnumerator co_MainCycle()
+	IEnumerator co_MakeRequestConnection(System.Action<Status> completeDel)
 	{
-		// Establishing Connection (Request)
+		if (status != Status.NotConnected)
+		{
+			Debug.LogError("cannot make request connection - wrong TGComModule status : " + status);
+			yield break;
+		}
+
+		Debug.Log("Start request channel...");
 
 		var conInfo = new TGTCPClientConnection.ConnectionInfo() { hostIP = System.Net.IPAddress.Parse(m_serverAddress), port = m_portNumber };
 		m_reqConnection.Make(conInfo);
+
+		status      = Status.Connecting;
 
 		while (m_reqConnection.connectionStatus == TGTCPClientConnection.ConnectionStatus.Waiting)    // pending until connection state changes
 			yield return null;
@@ -72,26 +100,44 @@ public class TGComModule : BaseSingleton<TGComModule>
 			if (m_reqConnection.PollError() == TGTCPClientConnection.ErrorCode.CannotConnect)
 			{
 				Debug.LogWarning("cannot connect to server!");
+				status  = Status.ConnectionFailed;
 			}
 			else
 			{
 				Debug.LogWarning("uh.... something is strange...");
+				status  = Status.ConnectionFailed;
 			}
-
-			yield break;
+		}
+		else
+		{
+			Debug.Log("request connection established!");
+			status  = Status.RequestChannelOpen;
 		}
 
-		// Establishing Connection (Trap)
+		completeDel(status);
+	}
+
+	IEnumerator co_MakeTrapConnection(System.Action<Status> completeDel)
+	{
+		if (status != Status.RequestChannelOpen)
+		{
+			Debug.LogError("cannot make request connection - wrong TGComModule status : " + status);
+			yield break;
+		}
 
 		Debug.Log("start listening trap connection");
 		var trConInfo   = new TGTCPServerConnection.ConnectionInfo() { hostIP = System.Net.IPAddress.Parse(localAddress) };
 		trConInfo.AllocateAvailablePort();
 		m_trapConnection.Make(trConInfo);
 
+		status          = Status.TrapChannelConnecting;
+
+		trapPort        = trConInfo.port;
 		Debug.Log("sending port number : " + trConInfo.port);
+
 		// notice server the trap socket's port number
 		m_reqConnection.Send(System.Text.Encoding.UTF8.GetBytes(trConInfo.port.ToString()));
-		
+
 		while (m_trapConnection.connectionStatus == TGTCPServerConnection.ConnectionStatus.Waiting)    // pending until connection state changes
 		{
 			m_reqConnection.Update();
@@ -104,22 +150,26 @@ public class TGComModule : BaseSingleton<TGComModule>
 			if (m_trapConnection.PollError() == TGTCPServerConnection.ErrorCode.CannotConnect)
 			{
 				Debug.LogWarning("cannot accept connection from server!");
+				status      = Status.ConnectionFailed;
 			}
 			else
 			{
 				Debug.LogWarning("uh.... something is strange...");
+				status      = Status.ConnectionFailed;
 			}
-
-			yield break;
 		}
+		else
+		{
+			Debug.Log("full connection established!");
+			status          = Status.FullChannelOpen;
+		}
+		
+		completeDel(status);
+	}
 
-
-
-		Debug.Log("connection established!");
-
-		// Typical receive / send loop
-
-		while (true)
+	IEnumerator co_MainCycle()
+	{
+		while (status == Status.FullChannelOpen)
 		{
 			var reqerror    = m_reqConnection.PollError();
 			var traperror   = m_trapConnection.PollError();
@@ -139,11 +189,8 @@ public class TGComModule : BaseSingleton<TGComModule>
 
 			if (errorRecv)
 			{
-				m_reqConnection.Kill();
-				m_trapConnection.Kill();
+				CloseConnection();
 				continue;
-
-				// TODO : process after disconnection
 			}
 
 			// req connection
@@ -182,21 +229,42 @@ public class TGComModule : BaseSingleton<TGComModule>
 		}
 	}
 
+	public void CloseConnection()
+	{
+		m_reqConnection.Kill();
+		m_trapConnection.Kill();
+
+		status      = Status.Closed;
+	}
+
 	void OnDestroy()
 	{
 		Debug.Log("TGComModule quit");
-		m_reqConnection.Kill();
-		m_trapConnection.Kill();
+		CloseConnection();
 	}
 
 
 	public void SendRequest(string message)
 	{
-		m_reqConnection.Send(System.Text.Encoding.UTF8.GetBytes(message));
+		if (m_reqConnection.connectionStatus != TGTCPClientConnection.ConnectionStatus.Established)
+		{
+			Debug.LogWarning("cannot send request : the socket is not established");
+		}
+		else
+		{
+			m_reqConnection.Send(System.Text.Encoding.UTF8.GetBytes(message));
+		}
 	}
 
 	public void SendTrapResponse(string message)
 	{
-		m_trapConnection.Send(System.Text.Encoding.UTF8.GetBytes(message));
+		if (m_trapConnection.connectionStatus != TGTCPServerConnection.ConnectionStatus.Established)
+		{
+			Debug.LogWarning("cannot send request : the socket is not established");
+		}
+		else
+		{
+			m_trapConnection.Send(System.Text.Encoding.UTF8.GetBytes(message));
+		}
 	}
 }
