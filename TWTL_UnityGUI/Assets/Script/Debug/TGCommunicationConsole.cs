@@ -11,11 +11,20 @@ public class TGCommunicationConsole : MonoBehaviour
 
 	void Awake()
 	{
+		if (!Debug.isDebugBuild)				// disable if the build is in release mode
+		{
+			enabled = false;
+			return;
+		}
+
 		Application.logMessageReceived += ProcessLogMessage;
 	}
 
 	void Start()
 	{
+		if (!Debug.isDebugBuild)
+			return;
+
 		var comModule   = TGComModule.instance;
 		comModule.reqMessageReceived += (message) =>
 		{
