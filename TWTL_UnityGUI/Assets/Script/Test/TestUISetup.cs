@@ -9,6 +9,8 @@ public class TestUISetup : MonoBehaviour
 	TestPanel1      m_panel1;
 	[SerializeField]
 	TestPanel1      m_panel2;
+	[SerializeField]
+	UIDynamicCamera m_uicam;
 
 
 	void Start()
@@ -29,6 +31,10 @@ public class TestUISetup : MonoBehaviour
 
 		uiMgr.SetDialogTransition(UIManager.Layer.Main, "main", "panel2");
 		uiMgr.SetDialogTransition(UIManager.Layer.Main, "panel2", "main");
+
+		m_uicam.AddPanelPosition("main", m_main);
+		m_uicam.AddPanelPosition("panel1", m_panel1);
+		m_uicam.AddPanelPosition("panel2", m_panel2);
 	}
 
 	void Update()

@@ -125,13 +125,13 @@ public class StateEventHub
 
 		public void CallStateEnter(string machineID, string stateID)
 		{
-			if (CheckAccepting(machineID, stateID))
+			if (stateEntered != null && CheckAccepting(machineID, stateID))
 				stateEntered(machineID, stateID);
 		}
 
 		public void CallStateLeave(string machineID, string stateID)
 		{
-			if (CheckAccepting(machineID, stateID))
+			if (stateLeaved != null && CheckAccepting(machineID, stateID))
 				stateLeaved(machineID, stateID);
 		}
 

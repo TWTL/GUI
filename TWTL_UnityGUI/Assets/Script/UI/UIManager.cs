@@ -57,11 +57,11 @@ public class UIManager : MonoBehaviour
 		}
 		return null;
 	}
-
+	
 	public void AddDialog(IUIPanel panel, Layer layer, params string[] stateIDforDialog)
 	{
 		// Setup event listener for the panel
-		var newListener	= CreateGeneralEventListener();
+		var newListener	= CreateUIEventListener();
 		newListener.SetFilterMethod(layer.ToString(), StateEventHub.FilterType.OnlyIncludes, stateIDforDialog);
 		panel.SetGlobalListener(newListener);
 
@@ -79,7 +79,7 @@ public class UIManager : MonoBehaviour
 		GetSM(layer).SetTransition(fromID, toID);
 	}
 
-	public StateEventHub.IListenerProtocol	CreateGeneralEventListener()
+	public StateEventHub.IListenerProtocol	CreateUIEventListener()
 	{
 		return m_stateEventHub.CreateStateListener();
 	}
