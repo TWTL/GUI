@@ -16,8 +16,13 @@ public class UIManager : MonoBehaviour
 	public const string     c_rootStateName = StateMachine.c_rootStateName;
 
 
-	// Properties
+	public interface IUIInitializer
+	{
+		void InitUI();
+	}
 
+
+	// Properties
 	
 	
 
@@ -44,6 +49,12 @@ public class UIManager : MonoBehaviour
 
 		m_mainSM.SetEventHub(m_stateEventHub);
 		m_subSM.SetEventHub(m_stateEventHub);
+
+		var initializer = GetComponent<IUIInitializer>();
+		if (initializer != null)
+		{
+			initializer.InitUI();
+		}
 	}
 
 	StateMachine GetSM(Layer layer)
@@ -77,6 +88,28 @@ public class UIManager : MonoBehaviour
 	public void SetDialogTransition(Layer layer, string fromID, string toID)
 	{
 		GetSM(layer).SetTransition(fromID, toID);
+	}
+
+	public void SetDialogTransitionBi(Layer layer, string state1, string state2)
+	{
+		var sm  = GetSM(layer);
+		sm.SetTransition(state1, state2);
+		sm.SetTransition(state2, state1);
+	}
+
+	public void SetDialogTransitionFromRoot(Layer layer, string toID)
+	{
+		SetDialogTransition(layer, c_rootStateName, toID);
+	}
+
+	public void SetDialogTransitionToRoot(Layer layer, string fromID)
+	{
+		SetDialogTransition(layer, fromID, c_rootStateName);
+	}
+
+	public void SetDialogTransitionRootBi(Layer layer, string stateID)
+	{
+		SetDialogTransitionBi(layer, stateID, c_rootStateName);
 	}
 
 	public StateEventHub.IListenerProtocol	CreateUIEventListener()

@@ -2,7 +2,6 @@
 using System.Collections;
 using System.Collections.Generic;
 
-[RequireComponent(typeof(Camera))]
 public class UIDynamicCamera : MonoBehaviour
 {
 	// Members
@@ -11,12 +10,18 @@ public class UIDynamicCamera : MonoBehaviour
 	Dictionary<string, Vector3>     m_positionDict  = new Dictionary<string, Vector3>();
 
 	Transform                       m_tr;
+	Rigidbody                       m_rigid;
 	Coroutine                       m_transitionCo;
+
+	readonly Vector3				m_screenCenterPos		= new Vector3(Screen.width / 2, Screen.height / 2);
+	float                           m_mousePosAngleRatio    = 45;
+	float                           m_cameraDistance        = 15;
 
 
 	void Awake()
 	{
 		m_tr        = transform;
+		m_rigid     = GetComponent<Rigidbody>();
 	}
 
 	void Start()
@@ -33,6 +38,21 @@ public class UIDynamicCamera : MonoBehaviour
 		};
 	}
 
+	void Update()
+	{
+		
+	}
+
+	void FixedUpdate()
+	{
+		var mouseFromCenter     = m_screenCenterPos - Input.mousePosition;
+		var cameraEulerAngle    = mouseFromCenter / m_mousePosAngleRatio;
+		var targetRot           = Quaternion.Euler(cameraEulerAngle.y, -cameraEulerAngle.x, 0);
+
+		m_rigid.rotation		= Quaternion.Lerp(m_rigid.rotation, targetRot, 0.25f);
+		//m_rigid.rotation        = targetRot;
+	}
+
 	void StartNewTransition(Vector3 newPos)
 	{
 		if (m_transitionCo != null)
@@ -44,22 +64,26 @@ public class UIDynamicCamera : MonoBehaviour
 	IEnumerator co_Transition(Vector3 newPos)
 	{
 		var startPos	= m_tr.position;
-		var startTime   = Time.time;
 		var duration    = 0.5f;
 		var elapsed     = 0f;
 
-		while ((elapsed = Time.time - startTime) < duration)
+		yield return new WaitForFixedUpdate();
+		var startTime   = Time.fixedTime;
+		
+
+		while ((elapsed = Time.fixedTime - startTime) < duration)
 		{
-			var t			= Mathf.Pow(elapsed / duration, 0.2f);
-			m_tr.position   = Vector3.Lerp(startPos, newPos, t);
-			yield return null;
+			var t				= Mathf.Pow(elapsed / duration, 0.2f);
+			m_rigid.position	= Vector3.Lerp(startPos, newPos, t);
+			
+			yield return new WaitForFixedUpdate();
 		}
-		m_tr.position       = newPos;
+		m_rigid.position		= newPos;
 	}
 
 	public void AddPanelPosition(string stateID, BaseUIPanel panel)
 	{
-		var calcPos         = panel.transform.position + (Vector3.back * 10);
+		var calcPos				= panel.transform.position + (Vector3.back * m_cameraDistance);
 		m_positionDict.Add(stateID, calcPos);
 	}
 }

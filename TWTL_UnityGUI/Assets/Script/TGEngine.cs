@@ -16,24 +16,58 @@ public class TGEngine : MonoBehaviour
 	IEnumerator co_LateStart()
 	{
 		yield return null;
+
+		TGUI.ShowPendingUI();
+
 		var comModule   = TGComModule.instance;
 		comModule.StartRequestConnection(ReqConnectionCallback);
+
+		// TEST
+		//StartCoroutine(co_Test());
+	}
+
+	IEnumerator co_Test()
+	{
+		yield return new WaitForSeconds(2);
+		TGUI.HidePendingUI();
+		TGUI.CallMainUI();
 	}
 
 	void ReqConnectionCallback(TGComModule.Status status)
 	{
 		if (status != TGComModule.Status.RequestChannelOpen)
-			return;
+		{
+			TGUI.GetMessagePanelBuilder()
+				.SetMessage("엔진에 연결할 수 없습니다.")
+				.AddButton("확인")
+				.Show();
+		}
+		else
+		{
+			var comModule   = TGComModule.instance;
+			comModule.StartTrapConnection(TrapConnectionCallback);
 
-		var comModule   = TGComModule.instance;
-		comModule.StartTrapConnection(TrapConnectionCallback);
-
-		// let the engine know the trap port number
-		// TODO
+			// let the engine know the trap port number
+			// TODO
+		}
 	}
 
 	void TrapConnectionCallback(TGComModule.Status status)
 	{
-		// we're all done, so......
+		if (status != TGComModule.Status.FullChannelOpen)
+		{
+			TGUI.GetMessagePanelBuilder()
+				.SetMessage("엔진에 연결할 수 없습니다.")
+				.AddButton("확인")
+				.Show();
+		}
+		else
+		{
+			// we're all done, so......
+
+			TGUI.HidePendingUI();
+			TGUI.CallMainUI(); // NOTE : we need fancy splashscreen here right before calling main panel.
+		}
 	}
+	//
 }
