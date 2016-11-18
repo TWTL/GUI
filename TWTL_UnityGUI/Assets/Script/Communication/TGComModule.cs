@@ -115,6 +115,8 @@ public class TGComModule : BaseSingleton<TGComModule>
 		}
 
 		completeDel(status);
+
+		StartCoroutine(co_RequestSocketCycle());
 	}
 
 	IEnumerator co_MakeTrapConnection(System.Action<Status> completeDel)
@@ -133,14 +135,14 @@ public class TGComModule : BaseSingleton<TGComModule>
 		status          = Status.TrapChannelConnecting;
 
 		trapPort        = trConInfo.port;
-		Debug.Log("sending port number : " + trConInfo.port);
+		Debug.Log("trao port number assigned : " + trConInfo.port);
 
-		// notice server the trap socket's port number
-		m_reqConnection.Send(System.Text.Encoding.UTF8.GetBytes(trConInfo.port.ToString()));
+		//// notice server the trap socket's port number
+		//m_reqConnection.Send(System.Text.Encoding.UTF8.GetBytes(trConInfo.port.ToString()));
 
 		while (m_trapConnection.connectionStatus == TGTCPServerConnection.ConnectionStatus.Waiting)    // pending until connection state changes
 		{
-			m_reqConnection.Update();
+			//m_reqConnection.Update();
 			m_trapConnection.Update();
 			yield return null;
 		}
@@ -165,25 +167,22 @@ public class TGComModule : BaseSingleton<TGComModule>
 		}
 		
 		completeDel(status);
+
+		StartCoroutine(co_TrapSocketCycle());
 	}
 
-	IEnumerator co_MainCycle()
+	IEnumerator co_RequestSocketCycle()
 	{
-		while (status == Status.FullChannelOpen)
+		Debug.Log("start co_RequestSocketCycle()");
+
+		while (status >= Status.RequestChannelOpen && status < Status.Closed)
 		{
 			var reqerror    = m_reqConnection.PollError();
-			var traperror   = m_trapConnection.PollError();
 			var errorRecv   = false;
 
 			if (reqerror != TGTCPClientConnection.ErrorCode.NoError)
 			{
 				Debug.LogWarning("request socket error : " + reqerror.ToString());
-				errorRecv   = true;
-			}
-
-			if (traperror != TGTCPServerConnection.ErrorCode.NoError)
-			{
-				Debug.LogWarning("trap socket error : " + traperror.ToString());
 				errorRecv   = true;
 			}
 
@@ -207,6 +206,31 @@ public class TGComModule : BaseSingleton<TGComModule>
 						reqMessageReceived(text);
 					//m_reqConnection.Send(System.Text.Encoding.UTF8.GetBytes("I sent something to you! " + Random.Range(1, 10000)));
 				}
+			}
+
+			yield return null;
+		}
+	}
+
+	IEnumerator co_TrapSocketCycle()
+	{
+		Debug.Log("start co_TrapSocketCycle()");
+
+		while (status == Status.FullChannelOpen)
+		{
+			var traperror   = m_trapConnection.PollError();
+			var errorRecv   = false;
+
+			if (traperror != TGTCPServerConnection.ErrorCode.NoError)
+			{
+				Debug.LogWarning("trap socket error : " + traperror.ToString());
+				errorRecv   = true;
+			}
+
+			if (errorRecv)
+			{
+				CloseConnection();
+				continue;
 			}
 
 			// trap connection

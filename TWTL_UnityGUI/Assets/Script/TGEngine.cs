@@ -19,6 +19,8 @@ public class TGEngine : MonoBehaviour
 
 		TGUI.ShowPendingUI();
 
+		TGEngineProcedures.RegisterProcedures();
+
 		var comModule   = TGComModule.instance;
 		comModule.StartRequestConnection(ReqConnectionCallback);
 
@@ -47,8 +49,8 @@ public class TGEngine : MonoBehaviour
 			var comModule   = TGComModule.instance;
 			comModule.StartTrapConnection(TrapConnectionCallback);
 
-			// let the engine know the trap port number
-			// TODO
+			// Start init sequence
+			TGEngineProcedures.procName.SimpleRequestGet();
 		}
 	}
 

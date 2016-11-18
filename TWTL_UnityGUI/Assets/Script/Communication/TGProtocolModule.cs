@@ -19,7 +19,19 @@ public class TGProtocolModule : MonoBehaviour
 			status,
 			meta,
 			value,
+			obj,	// object
 		}
+
+		/// <summary>
+		/// we need this instead of FunctionType.ToString() because of the limitation of c# enum. ("object" cannot be a member of an enum)
+		/// </summary>
+		/// <param name="type"></param>
+		/// <returns></returns>
+		public static string ConvertFunctionTypeEnum(FunctionType type)
+		{
+			return type == FunctionType.obj ? "object" : type.ToString();
+		}
+		//
 
 		protected struct FuncIndexerImpl
 		{
@@ -29,11 +41,11 @@ public class TGProtocolModule : MonoBehaviour
 			{
 				get
 				{
-					return proc.m_functionDict[type.ToString()];
+					return proc.m_functionDict[ConvertFunctionTypeEnum(type)];
 				}
 				set
 				{
-					proc.m_functionDict[type.ToString()] = value;
+					proc.m_functionDict[ConvertFunctionTypeEnum(type)] = value;
 				}
 			}
 
@@ -54,12 +66,14 @@ public class TGProtocolModule : MonoBehaviour
 		// Members
 
 		Dictionary<string, FuncDel>		m_functionDict  = new Dictionary<string, FuncDel>();
-		SendResponseDel					m_respDel;
+		SendResponseDel					m_sendDel;
 
 		/// <summary>
 		/// shortcut for m_functionDict
 		/// </summary>
 		protected FuncIndexerImpl functions { get; private set; }
+
+		public abstract string procedurePath { get; }
 		
 		
 
@@ -68,20 +82,20 @@ public class TGProtocolModule : MonoBehaviour
 			functions	= new FuncIndexerImpl() { proc  = this };
 		}
 
-		public void SetResponseDelegate(SendResponseDel del)
+		public void SetMessageDelegate(SendResponseDel del)
 		{
-			m_respDel   = del;
+			m_sendDel   = del;
 		}
 		//
 
 		protected void RegisterFunction(FunctionType type, FuncDel del)
 		{
-			m_functionDict[type.ToString()]    = del;
+			m_functionDict[ConvertFunctionTypeEnum(type)]    = del;
 		}
 
-		protected void SendResponse(FunctionType type, string path, JSONObject param)
+		protected void SendMessage(FunctionType type, JSONObject param)
 		{
-			m_respDel(type.ToString(), path, param);
+			m_sendDel(ConvertFunctionTypeEnum(type), procedurePath, param);
 		}
 
 		/// <summary>
@@ -91,7 +105,7 @@ public class TGProtocolModule : MonoBehaviour
 		/// <param name="param"></param>
 		public void CallFunction(FunctionType type, JSONObject param)
 		{
-			CallFunction(type.ToString(), param);
+			CallFunction(ConvertFunctionTypeEnum(type), param);
 		}
 
 		/// <summary>
@@ -111,6 +125,15 @@ public class TGProtocolModule : MonoBehaviour
 				func(param);
 			}
 		}
+		//
+
+		/// <summary>
+		/// utility - simply sends get request
+		/// </summary>
+		public void SimpleRequestGet()
+		{
+			SendMessage(FunctionType.get, null);
+		}
 	}
 	//
 
@@ -120,11 +143,11 @@ public class TGProtocolModule : MonoBehaviour
 	const string                c_keyApp			= "app";
 	const string                c_keyName			= "name";
 	const string                c_keyVersion		= "version";
-	const string                c_keyType			= "type";
-	const string                c_keyContent		= "context";
-	const string                c_keyFunction		= "function";
-	const string                c_keyPath			= "path";
-	const string                c_keyData			= "data";
+	//const string                c_keyType			= "type";
+	const string                c_keyContent		= "contents";
+	const string                c_keyFunction		= "type";
+	const string                c_keyPath			= "name";
+	const string                c_keyData			= "value";
 
 	const string                c_packTypeRequest   = "request";
 	const string                c_packTypeResponse  = "response";
@@ -132,9 +155,9 @@ public class TGProtocolModule : MonoBehaviour
 	const string                c_packTypeTrapAnswer= "trap-ack";
 
 	// NOTE : these are more than just literals, should be categorized as something like global variables.
-	const string                c_appVersion		= "1.0";
-	const string                c_appNameClient		= "TWTL_GUI";
-	const string                c_appNameServer		= "TWTL_Engine";
+	const string                c_appVersion		= "1";
+	const string                c_appNameClient		= "TWTL-GUI";
+	const string                c_appNameServer		= "TWTL-Engine";
 	const string                c_appName			= "TWTL";
 
 	
@@ -177,15 +200,15 @@ public class TGProtocolModule : MonoBehaviour
 	/// <param name="path"></param>
 	/// <param name="proc"></param>
 	/// <param name="isTrap"></param>
-	public void RegisterProcedure(string path, BaseProcedure proc, bool isTrap = false)
+	public void RegisterProcedure(BaseProcedure proc, bool isTrap = false)
 	{
 		var info            = new ProcedureInfo()
 		{
 			procedure       = proc,
 			isTrap          = isTrap,
 		};
-		m_procDict[path]    = info;
-		proc.SetResponseDelegate((type, ppath, param) =>
+		m_procDict[proc.procedurePath]    = info;
+		proc.SetMessageDelegate((type, ppath, param) =>
 		{
 			var trap        = isTrap;
 			ProcessSendingData(type, ppath, param, trap);
@@ -194,6 +217,8 @@ public class TGProtocolModule : MonoBehaviour
 
 	private void ProcessReceivedData(string message)
 	{
+		Debug.Log("ProcessReceivedData : " + message);
+
 		JSONObject parsed   = null;
 		try
 		{
@@ -229,7 +254,7 @@ public class TGProtocolModule : MonoBehaviour
 			veriFailed      = true;
 		}
 
-		var type            = parsed[c_keyType].str;
+		//var type            = parsed[c_keyType].str;
 
 
 		if (veriFailed)                     // ignore this response if not valid
@@ -240,30 +265,32 @@ public class TGProtocolModule : MonoBehaviour
 		for (var i = 0; i < count; i++)		// process each function calls
 		{
 			var entry       = content[i];
+			var funcsplit	= entry[c_keyFunction].str.Split('.');
 
-			var func        = entry[c_keyFunction].str;
+			var type        = funcsplit[0];
+			var func        = funcsplit[1];
 			var path        = entry[c_keyPath].str;
-			var data        = entry[c_keyData];
+			var data        = entry.HasField(c_keyData)? entry[c_keyData] : null;
 
 			ProcedureInfo proc;
-			if (!m_procDict.TryGetValue(path, out proc))
+			if (!m_procDict.TryGetValue(path, out proc))														// path validation
 			{
 				Debug.LogError("received packet - invalid path : " + path);
 			}
-			else if (!(!proc.isTrap && type == c_packTypeResponse || proc.isTrap && type == c_packTypeTrap))
+			else if (!(!proc.isTrap && type == c_packTypeResponse || proc.isTrap && type == c_packTypeTrap))	// func type validation (response or trap)
 			{
 				Debug.LogError("receiced packet - invalid packet type for the context : " + type);
 			}
 			else
 			{
-				proc.procedure.CallFunction(func, data);			// calls actual function
+				proc.procedure.CallFunction(func, data);														// calls actual function
 			}
 		}
 	}
 
 	private void ProcessSendingData(BaseProcedure.FunctionType type, string path, JSONObject param, bool isTrap)
 	{
-		ProcessSendingData(type.ToString(), path, param, isTrap);
+		ProcessSendingData(BaseProcedure.ConvertFunctionTypeEnum(type), path, param, isTrap);
 	}
 	
 	private void ProcessSendingData(string type, string path, JSONObject param, bool isTrap)
@@ -273,17 +300,17 @@ public class TGProtocolModule : MonoBehaviour
 		packed.AddField(c_keyName, c_appName);
 		packed.AddField(c_keyVersion, c_appVersion);
 
-		packed.AddField(c_keyType, isTrap ? c_packTypeTrapAnswer : c_packTypeRequest);
+		//packed.AddField(c_keyType, isTrap ? c_packTypeTrapAnswer : c_packTypeRequest);
 		
 		var callObj         = new JSONObject();
-		callObj.AddField(c_keyFunction, type.ToString());
+		callObj.AddField(c_keyFunction, string.Format("{0}.{1}", type, isTrap ? c_packTypeTrapAnswer : c_packTypeRequest));
 		callObj.AddField(c_keyPath, path);
 		callObj.AddField(c_keyData, param);
 
 		var content         = new JSONObject[] { callObj };
 		packed.AddField(c_keyContent, new JSONObject(content));
 
-		var message         = packed.ToString();
+		var message         = packed.ToString(true); // TEST : pretty
 		var comModule       = TGComModule.instance;
 		if (isTrap)
 		{
@@ -293,5 +320,10 @@ public class TGProtocolModule : MonoBehaviour
 		{
 			comModule.SendRequest(message);
 		}
+	}
+
+	public BaseProcedure GetProcedureObject(string path)
+	{
+		return m_procDict[path].procedure;
 	}
 }
