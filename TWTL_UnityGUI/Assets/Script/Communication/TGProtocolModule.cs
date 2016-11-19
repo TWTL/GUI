@@ -146,7 +146,7 @@ public class TGProtocolModule : MonoBehaviour
 	//const string                c_keyType			= "type";
 	const string                c_keyContent		= "contents";
 	const string                c_keyFunction		= "type";
-	const string                c_keyPath			= "name";
+	const string                c_keyPath			= "path";
 	const string                c_keyData			= "value";
 
 	const string                c_packTypeRequest   = "request";
