@@ -261,6 +261,15 @@ public class TGComModule : BaseSingleton<TGComModule>
 		status      = Status.Closed;
 	}
 
+	public void ResetConnection()
+	{
+		CloseConnection();
+
+		// some additional process...?
+
+		status		= Status.NotConnected;
+	}
+
 	void OnDestroy()
 	{
 		Debug.Log("TGComModule quit");

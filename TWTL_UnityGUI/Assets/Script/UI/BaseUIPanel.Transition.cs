@@ -64,6 +64,7 @@ public abstract partial class BaseUIPanel : MonoBehaviour
 
 		public void Stop()
 		{
+			//Debug.LogFormat("{0} Transition.Stop called - m_coroutine : {1}", target.gameObject.name, m_coroutine);
 			if (m_coroutine != null)
 			{
 				target.StopCoroutine(m_coroutine);

@@ -122,6 +122,7 @@ public abstract partial class BaseUIPanel : MonoBehaviour, IUIPanel
 
 	void OnInternalStateEnter(string machineID, string stateID)
 	{
+		//Debug.LogFormat("{0} internal state enter : {1}", gameObject.name, stateID);
 		switch(stateID)
 		{
 			case c_stateBeginOpen:
@@ -162,7 +163,8 @@ public abstract partial class BaseUIPanel : MonoBehaviour, IUIPanel
 
 	void OnInternalStateLeave(string machineID, string stateID)
 	{
-		switch(stateID)
+		//Debug.LogFormat("{0} internal state leave : {1}", gameObject.name, stateID);
+		switch (stateID)
 		{
 			case StateMachine.c_rootStateName:
 				gameObject.SetActive(true);
@@ -181,11 +183,13 @@ public abstract partial class BaseUIPanel : MonoBehaviour, IUIPanel
 
 		m_globalListener.stateEntered   += (machineid, stateid) =>
 		{
+			//Debug.LogFormat("{0} stateEntered : {1}, {2}", gameObject.name, machineid, stateid);
 			previousDialogStateID   = listener.prevStateID;
 			Open();
 		};
 		m_globalListener.stateLeaved    += (machineid, stateid) =>
 		{
+			//Debug.LogFormat("{0} stateLeaved : {1}, {2}", gameObject.name, machineid, stateid);
 			Close();
 		};
 	}

@@ -119,12 +119,13 @@ public class TGMessagePanel : BaseUIPanel
 
 	void OnButtonClick(int index)
 	{
+		UIManager.instance.SetState(UIManager.Layer.Sub, UIManager.c_rootStateName);
+
 		var del     = m_buttonInfos[index].del;
 		if (del != null)
 			del();
 
 		// Cleanups
 		ClearDelegates();
-		UIManager.instance.SetState(UIManager.Layer.Sub, UIManager.c_rootStateName);
 	}
 }

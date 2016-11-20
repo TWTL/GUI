@@ -119,6 +119,7 @@ public class UIManager : MonoBehaviour
 
 	public void SetState(Layer layer, string stateID)
 	{
+		//Debug.LogFormat("{0} layer state -> {1}", layer.ToString(), stateID);
 		GetSM(layer).TransitionTo(stateID);
 	}
 }

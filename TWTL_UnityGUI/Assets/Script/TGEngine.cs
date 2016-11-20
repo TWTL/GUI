@@ -41,7 +41,7 @@ public class TGEngine : MonoBehaviour
 		{
 			TGUI.GetMessagePanelBuilder()
 				.SetMessage("엔진에 연결할 수 없습니다.")
-				.AddButton("확인")
+				.AddButton("재시도", RetryConnection)
 				.Show();
 		}
 		else
@@ -60,7 +60,7 @@ public class TGEngine : MonoBehaviour
 		{
 			TGUI.GetMessagePanelBuilder()
 				.SetMessage("엔진에 연결할 수 없습니다.")
-				.AddButton("확인")
+				.AddButton("재시도", RetryConnection)
 				.Show();
 		}
 		else
@@ -70,6 +70,15 @@ public class TGEngine : MonoBehaviour
 			TGUI.HidePendingUI();
 			TGUI.CallMainUI(); // NOTE : we need fancy splashscreen here right before calling main panel.
 		}
+	}
+
+	void RetryConnection()
+	{
+		TGUI.ShowPendingUI();
+
+		var comModule   = TGComModule.instance;
+		comModule.ResetConnection();
+		comModule.StartRequestConnection(ReqConnectionCallback);
 	}
 	//
 }
