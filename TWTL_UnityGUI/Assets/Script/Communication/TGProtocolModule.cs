@@ -13,7 +13,7 @@ public class TGProtocolModule : MonoBehaviour
 	/// </summary>
 	public abstract class BaseProcedureChain
 	{
-		public delegate void ChainResultDel(bool result, object param);
+		public delegate void ChainResultDel(bool result);
 
 		/// <summary>
 		/// interface that can be chained by BaseProcedureChain
@@ -94,9 +94,15 @@ public class TGProtocolModule : MonoBehaviour
 			}
 		}
 
+		protected void AddChainee(string name, IChainee chainee)
+		{
+			m_chainees.Add(new ChaineeInfo() { name = name, chainee = chainee });
+		}
+
 		protected void NextChain()
 		{
-			if (m_nextChainIndex > 0)               // if available, call finish for previous chainee
+			var isFirstOne  = m_nextChainIndex == 0;
+			if (!isFirstOne)							// if available, call finish for previous chainee
 			{
 				if (!m_chainees[m_nextChainIndex - 1].chainee.FinishChain(this))
 				{
@@ -107,10 +113,8 @@ public class TGProtocolModule : MonoBehaviour
 			var count       = m_chainees.Count;
 			var chInfo      = m_chainees[m_nextChainIndex++];
 			var isLastOne   = m_nextChainIndex >= count;
-			chInfo.chainee.BeginChain(this, (success, param) =>
+			chInfo.chainee.BeginChain(this, (success) =>
 			{
-				OnChaineeResult(chInfo.name, chInfo.chainee, success, param);
-
 				if (isLastOne || !success)				// if this chainee is last one or result was not success, release all chain
 				{
 					chInfo.chainee.FinishChain(this);
@@ -120,10 +124,18 @@ public class TGProtocolModule : MonoBehaviour
 				{										// ...or keep running
 					NextChain();
 				}
+
+				OnChaineeResult(chInfo.name, chInfo.chainee, success);
 			});
+
+			if (isFirstOne)
+			{
+				OnStartingChain(chInfo.name, chInfo.chainee);
+			}
 		}
 
-		protected abstract void OnChaineeResult(string chainName, IChainee chain, bool result, object param);
+		protected abstract void OnStartingChain(string chainName, IChainee chainee);
+		protected abstract void OnChaineeResult(string name, IChainee chainee, bool result);
 	}
 
 	public abstract class BaseProcedure : BaseProcedureChain.IChainee
@@ -187,6 +199,9 @@ public class TGProtocolModule : MonoBehaviour
 		Dictionary<string, FuncDel>		m_functionDict  = new Dictionary<string, FuncDel>();
 		SendResponseDel					m_sendDel;
 
+		BaseProcedureChain					m_chain;            // null if no chain acquired this
+		BaseProcedureChain.ChainResultDel   m_chainResultDel;
+
 		/// <summary>
 		/// shortcut for m_functionDict
 		/// </summary>
@@ -214,7 +229,14 @@ public class TGProtocolModule : MonoBehaviour
 
 		protected void SendMessage(FunctionType type, JSONObject param)
 		{
-			m_sendDel(ConvertFunctionTypeEnum(type), procedurePath, param);
+			if (m_chain != null && m_chainResultDel == null)	// if it's acquired from a chain but not get ready for a chain call, it's an error situation
+			{
+				Debug.LogError("Procedure acquired from a chain but not ready to call SendMessage");
+			}
+			else
+			{
+				m_sendDel(ConvertFunctionTypeEnum(type), procedurePath, param);
+			}
 		}
 
 		/// <summary>
@@ -244,6 +266,26 @@ public class TGProtocolModule : MonoBehaviour
 				func(param);
 			}
 		}
+
+		public void FinishOneCall()
+		{
+			var result  = OnCallFinish();
+
+			if (m_chain != null && m_chainResultDel == null)
+			{
+				Debug.LogError("chain error : the chainee should not be finished this time");
+			}
+			else if (m_chainResultDel != null)
+			{
+				m_chainResultDel(result);
+			}
+		}
+
+		/// <summary>
+		/// calls when one response process is end
+		/// </summary>
+		/// <returns>true if response is valid and successful, false otherwise</returns>
+		protected abstract bool OnCallFinish();
 		//
 
 		/// <summary>
@@ -259,22 +301,45 @@ public class TGProtocolModule : MonoBehaviour
 
 		public bool ReadyForChain(BaseProcedureChain chain)
 		{
-			throw new NotImplementedException();
+			if (m_chain != null)
+				return false;
+
+			m_chain = chain;
+			return true;
 		}
 
 		public bool ReleaseFromChain(BaseProcedureChain chain)
 		{
-			throw new NotImplementedException();
+			if (m_chain != chain)
+				return false;
+
+			m_chain				= null;
+			m_chainResultDel    = null;
+			return true;
 		}
 
 		public bool BeginChain(BaseProcedureChain chain, BaseProcedureChain.ChainResultDel resultDel)
 		{
-			throw new NotImplementedException();
+			if (m_chain != chain)
+				return false;
+
+			if (m_chainResultDel != null)
+				return false;
+
+			m_chainResultDel    = resultDel;
+			return true;
 		}
 
 		public bool FinishChain(BaseProcedureChain chain)
 		{
-			throw new NotImplementedException();
+			if (m_chain != chain)
+				return false;
+
+			if (m_chainResultDel == null)
+				return false;
+
+			m_chainResultDel    = null;
+			return true;
 		}
 		//
 	}
@@ -314,7 +379,8 @@ public class TGProtocolModule : MonoBehaviour
 	}
 
 	Dictionary<string, ProcedureInfo>   m_procDict  = new Dictionary<string, ProcedureInfo>();
-
+	Queue<string>                       m_trapMsgQueue  = new Queue<string>();
+	int                                 m_responseWaitingCount  = 0;
 
 
 	public static TGProtocolModule instance { get; private set; }
@@ -328,13 +394,21 @@ public class TGProtocolModule : MonoBehaviour
 	void Start()
 	{
 		var comModule					= TGComModule.instance;
-		comModule.reqMessageReceived	+= ProcessReceivedData;
-		comModule.trapMessageReceived	+= ProcessReceivedData;
+		comModule.reqMessageReceived	+= ProcessReceivedResponseData;
+		comModule.trapMessageReceived	+= ProcessReceivedTrapData;
 	}
 	
 	void Update()
 	{
-
+		if (m_responseWaitingCount == 0)
+		{
+			while (m_trapMsgQueue.Count > 0)
+			{
+				var msg = m_trapMsgQueue.Dequeue();
+				Debug.Log("Trap execution! : " + msg);
+				ProcessReceivedData(msg);
+			}
+		}
 	}
 
 	/// <summary>
@@ -356,6 +430,17 @@ public class TGProtocolModule : MonoBehaviour
 			var trap        = isTrap;
 			ProcessSendingData(type, ppath, param, trap);
 		});
+	}
+
+	private void ProcessReceivedResponseData(string message)
+	{
+		ProcessReceivedData(message);
+		m_responseWaitingCount--;           // decrease response counter
+	}
+
+	private void ProcessReceivedTrapData(string message)
+	{
+		m_trapMsgQueue.Enqueue(message);
 	}
 
 	private void ProcessReceivedData(string message)
@@ -405,6 +490,7 @@ public class TGProtocolModule : MonoBehaviour
 
 		var content         = parsed[c_keyContent].list;
 		var count           = content.Count;
+		ProcedureInfo	proc = new ProcedureInfo();	// restriction - only one path in one response
 		for (var i = 0; i < count; i++)		// process each function calls
 		{
 			var entry       = content[i];
@@ -414,8 +500,7 @@ public class TGProtocolModule : MonoBehaviour
 			var func        = funcsplit[1];
 			var path        = entry[c_keyPath].str;
 			var data        = entry.HasField(c_keyData)? entry[c_keyData] : null;
-
-			ProcedureInfo proc;
+			
 			if (!m_procDict.TryGetValue(path, out proc))														// path validation
 			{
 				Debug.LogError("received packet - invalid path : " + path);
@@ -429,6 +514,8 @@ public class TGProtocolModule : MonoBehaviour
 				proc.procedure.CallFunction(func, data);														// calls actual function
 			}
 		}
+
+		proc.procedure.FinishOneCall();		// end call of one response
 	}
 
 	private void ProcessSendingData(BaseProcedure.FunctionType type, string path, JSONObject param, bool isTrap)
@@ -461,6 +548,8 @@ public class TGProtocolModule : MonoBehaviour
 		}
 		else
 		{
+			m_responseWaitingCount++;       // increase response counter - this prevents trap to be processed before all requests are processed
+
 			comModule.SendRequest(message);
 		}
 	}

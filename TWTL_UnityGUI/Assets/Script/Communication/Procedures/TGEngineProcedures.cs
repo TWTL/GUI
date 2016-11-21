@@ -3,7 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System;
 
-public class TGEngineProcedures
+public static class TGEngineProcedures
 {
 	public class Name : TGProtocolModule.BaseProcedure
 	{
@@ -27,8 +27,14 @@ public class TGEngineProcedures
 				Debug.Log(procedurePath + " object : " + param.str);
 
 				// TEST sequence
-				procVersion.SimpleRequestGet();
+				//procVersion.SimpleRequestGet();
 			});
+		}
+
+		protected override bool OnCallFinish()
+		{
+			Debug.Log(procedurePath + " OnCallFinish()");
+			return true;
 		}
 	}
 
@@ -54,8 +60,14 @@ public class TGEngineProcedures
 				Debug.Log(procedurePath + " object : " + param.str);
 
 				// TEST sequence
-				procRequestPort.SimpleRequestGet();
+				//procRequestPort.SimpleRequestGet();
 			});
+		}
+
+		protected override bool OnCallFinish()
+		{
+			Debug.Log(procedurePath + " OnCallFinish()");
+			return true;
 		}
 	}
 
@@ -81,8 +93,14 @@ public class TGEngineProcedures
 				Debug.Log(procedurePath + " object : " + param.str);
 
 				// TEST sequence
-				procTrapPort.RequestSetPort(TGComModule.instance.trapPort);
+				//procTrapPort.RequestSetPort(TGComModule.instance.trapPort);
 			});
+		}
+
+		protected override bool OnCallFinish()
+		{
+			Debug.Log(procedurePath + " OnCallFinish()");
+			return true;
 		}
 	}
 
@@ -104,12 +122,56 @@ public class TGEngineProcedures
 			});
 		}
 
+		protected override bool OnCallFinish()
+		{
+			Debug.Log(procedurePath + " OnCallFinish()");
+			return true;
+		}
+
 		public void RequestSetPort(int portnum)
 		{
 			SendMessage(FunctionType.set, new JSONObject(portnum));
 		}
 	}
 	//
+
+	public class InitChain : TGProtocolModule.BaseProcedureChain
+	{
+		public InitChain()
+		{
+			AddChainee("name", procName);
+			AddChainee("version", procVersion);
+			AddChainee("requestport", procRequestPort);
+			AddChainee("trapport", procTrapPort);
+		}
+
+		protected override void OnStartingChain(string chainName, IChainee chain)
+		{
+			procName.SimpleRequestGet();
+		}
+
+		protected override void OnChaineeResult(string name, IChainee chainee, bool result)
+		{
+			switch (name)
+			{
+				case "name":
+					procVersion.SimpleRequestGet();
+					break;
+
+				case "version":
+					procRequestPort.SimpleRequestGet();
+					break;
+
+				case "requestport":
+					procTrapPort.RequestSetPort(TGComModule.instance.trapPort);
+					break;
+
+				case "trapport":
+
+					break;
+			}
+		}
+	}
 
 
 	// Members

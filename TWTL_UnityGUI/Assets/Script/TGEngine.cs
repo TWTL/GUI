@@ -20,6 +20,7 @@ public class TGEngine : MonoBehaviour
 		TGUI.ShowPendingUI();
 
 		TGEngineProcedures.RegisterProcedures();
+		TestTrapProcedure.RegisterProcedures();
 
 		var comModule   = TGComModule.instance;
 		comModule.StartRequestConnection(ReqConnectionCallback);
@@ -50,7 +51,8 @@ public class TGEngine : MonoBehaviour
 			comModule.StartTrapConnection(TrapConnectionCallback);
 
 			// Start init sequence
-			TGEngineProcedures.procName.SimpleRequestGet();
+			//TGEngineProcedures.procName.SimpleRequestGet();
+			new TGEngineProcedures.InitChain().StartChain();
 		}
 	}
 
