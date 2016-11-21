@@ -245,13 +245,13 @@ public class TGProtocolModule : MonoBehaviour
 		}
 		if (app != c_appNameServer)
 		{
-			Debug.LogError("received packet - sender app is not the expected one");
-			veriFailed      = true;
+			Debug.LogWarning("received packet - sender app is not the expected one");
+			//veriFailed      = true;
 		}
 		if (version != c_appVersion)
 		{
-			Debug.LogError("received packet - app version mismatch!");
-			veriFailed      = true;
+			Debug.LogWarning("received packet - app version mismatch!");
+			//veriFailed      = true;
 		}
 
 		//var type            = parsed[c_keyType].str;
