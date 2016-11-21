@@ -285,6 +285,7 @@ public class TGComModule : BaseSingleton<TGComModule>
 		}
 		else
 		{
+			message = message + '\0';	// null termination
 			m_reqConnection.Send(System.Text.Encoding.UTF8.GetBytes(message));
 		}
 	}
@@ -297,6 +298,7 @@ public class TGComModule : BaseSingleton<TGComModule>
 		}
 		else
 		{
+			message = message + '\0';   // null termination
 			m_trapConnection.Send(System.Text.Encoding.UTF8.GetBytes(message));
 		}
 	}
