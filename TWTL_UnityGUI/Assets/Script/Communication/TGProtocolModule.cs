@@ -1,13 +1,132 @@
 ﻿using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
+using System;
 
 /// <summary>
 /// Module for protocol management
 /// </summary>
 public class TGProtocolModule : MonoBehaviour
 {
-	public abstract class BaseProcedure
+	/// <summary>
+	/// class for a procedure chain
+	/// </summary>
+	public abstract class BaseProcedureChain
+	{
+		public delegate void ChainResultDel(bool result, object param);
+
+		/// <summary>
+		/// interface that can be chained by BaseProcedureChain
+		/// </summary>
+		public interface IChainee
+		{
+			bool ReadyForChain(BaseProcedureChain chain);
+			bool ReleaseFromChain(BaseProcedureChain chain);
+
+			bool BeginChain(BaseProcedureChain chain, ChainResultDel resultDel);
+			bool FinishChain(BaseProcedureChain chain);
+		}
+		//
+
+		// Members
+
+		struct ChaineeInfo
+		{
+			public IChainee	chainee;
+			public string	name;
+		}
+
+		List<ChaineeInfo>	m_chainees	= new List<ChaineeInfo>();
+		int					m_nextChainIndex;
+
+
+
+		private bool AcquireChainees()
+		{
+			var	fullSuccess = false;
+			var count       = m_chainees.Count;
+			var i			= 0;
+			var needRevert  = false;
+
+			for (i = 0; i < count; i++)				// try to make all chainees ready one by one
+			{
+				if (!m_chainees[i].chainee.ReadyForChain(this))
+				{
+					needRevert  = true;
+					break;
+				}
+			}
+
+			if (needRevert)							// if one of the chainees cannot be ready, then release every chainees come before this
+			{
+				for (var ri	= 0; ri < i; ri++)
+				{
+					m_chainees[ri].chainee.ReleaseFromChain(this);
+				}
+			}
+			else
+			{
+				fullSuccess = true;
+			}
+
+			return fullSuccess;
+		}
+
+		private void ReleaseChainees()
+		{
+			var count       = m_chainees.Count;
+			for (var i = 0; i < count; i++)
+			{
+				m_chainees[i].chainee.ReleaseFromChain(this);
+			}
+		}
+
+		public void StartChain()
+		{
+			if (!AcquireChainees())
+			{
+				Debug.LogError("cannot acquire procedure chain");
+			}
+			else
+			{
+				m_nextChainIndex    = 0;
+				NextChain();
+			}
+		}
+
+		protected void NextChain()
+		{
+			if (m_nextChainIndex > 0)               // if available, call finish for previous chainee
+			{
+				if (!m_chainees[m_nextChainIndex - 1].chainee.FinishChain(this))
+				{
+					Debug.LogWarning("cannot finish a chainee... something's wrong here!");
+				}
+			}
+
+			var count       = m_chainees.Count;
+			var chInfo      = m_chainees[m_nextChainIndex++];
+			var isLastOne   = m_nextChainIndex >= count;
+			chInfo.chainee.BeginChain(this, (success, param) =>
+			{
+				OnChaineeResult(chInfo.name, chInfo.chainee, success, param);
+
+				if (isLastOne || !success)				// if this chainee is last one or result was not success, release all chain
+				{
+					chInfo.chainee.FinishChain(this);
+					ReleaseChainees();
+				}
+				else
+				{										// ...or keep running
+					NextChain();
+				}
+			});
+		}
+
+		protected abstract void OnChaineeResult(string chainName, IChainee chain, bool result, object param);
+	}
+
+	public abstract class BaseProcedure : BaseProcedureChain.IChainee
 	{
 		public delegate void FuncDel(JSONObject param);
 		public delegate void SendResponseDel(string type, string path, JSONObject param);
@@ -134,6 +253,18 @@ public class TGProtocolModule : MonoBehaviour
 		{
 			SendMessage(FunctionType.get, null);
 		}
+
+
+		// chain functions
+
+		public bool ReadyForChain(BaseProcedureChain chain)
+		{
+			throw new NotImplementedException();
+		}
+
+		public bool ReleaseFromChain(BaseProcedureChain chain)
+		{
+			throw new NotImplementedException();
 	}
 	//
 
