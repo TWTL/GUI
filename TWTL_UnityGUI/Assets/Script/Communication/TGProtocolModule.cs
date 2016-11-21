@@ -217,7 +217,7 @@ public class TGProtocolModule : MonoBehaviour
 
 	private void ProcessReceivedData(string message)
 	{
-		Debug.Log("ProcessReceivedData : " + message);
+		//Debug.Log("ProcessReceivedData : " + message);
 
 		JSONObject parsed   = null;
 		try
