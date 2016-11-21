@@ -265,6 +265,18 @@ public class TGProtocolModule : MonoBehaviour
 		public bool ReleaseFromChain(BaseProcedureChain chain)
 		{
 			throw new NotImplementedException();
+		}
+
+		public bool BeginChain(BaseProcedureChain chain, BaseProcedureChain.ChainResultDel resultDel)
+		{
+			throw new NotImplementedException();
+		}
+
+		public bool FinishChain(BaseProcedureChain chain)
+		{
+			throw new NotImplementedException();
+		}
+		//
 	}
 	//
 
@@ -434,7 +446,7 @@ public class TGProtocolModule : MonoBehaviour
 		//packed.AddField(c_keyType, isTrap ? c_packTypeTrapAnswer : c_packTypeRequest);
 		
 		var callObj         = new JSONObject();
-		callObj.AddField(c_keyFunction, string.Format("{0}.{1}", type, isTrap ? c_packTypeTrapAnswer : c_packTypeRequest));
+		callObj.AddField(c_keyFunction, string.Format("{0}.{1}", isTrap ? c_packTypeTrapAnswer : c_packTypeRequest, type));
 		callObj.AddField(c_keyPath, path);
 		callObj.AddField(c_keyData, param);
 
