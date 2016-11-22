@@ -14,7 +14,7 @@ public class UIDynamicCamera : MonoBehaviour
 	Coroutine                       m_transitionCo;
 
 	readonly Vector3				m_screenCenterPos		= new Vector3(Screen.width / 2, Screen.height / 2);
-	float                           m_mousePosAngleRatio    = 45;
+	float                           m_mousePosAngleRatio    = 90;
 	float                           m_cameraDistance        = 15;
 
 

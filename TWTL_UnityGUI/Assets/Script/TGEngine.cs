@@ -1,6 +1,7 @@
 ﻿using UnityEngine;
 using System.Collections;
 
+
 public class TGEngine : MonoBehaviour
 {
 	void Start()
@@ -31,6 +32,7 @@ public class TGEngine : MonoBehaviour
 
 	IEnumerator co_Test()
 	{
+		TGUI.ShowPendingUI();
 		yield return new WaitForSeconds(2);
 		TGUI.HidePendingUI();
 		TGUI.CallMainUI();

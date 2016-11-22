@@ -9,4 +9,9 @@ public class TGMainPanel : BaseUIPanel
 
 		alpha       = 0;
 	}
+
+	public void OnButtonRegistryUI()
+	{
+		TGUI.CallRegistryUI();
+	}
 }
