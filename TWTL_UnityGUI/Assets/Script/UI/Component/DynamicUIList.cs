@@ -183,4 +183,26 @@ public abstract class DynamicUIList<ItemT, ParamT> : MonoBehaviour
 			item.RealignPosition(i);
 		}
 	}
+
+	public void ClearAll()
+	{
+		var count       = m_items.Count;
+		for (var i = 0; i < count; i++)
+		{
+			Destroy(m_items[i].gameObject);
+		}
+		m_items.Clear();
+
+
+
+		// clean up all coroutines
+
+		if (m_itemCreateCo != null)
+			StopCoroutine(m_itemCreateCo);
+		m_itemCreateCo  = null;
+
+		if (m_itemRealignCo != null)
+			StopCoroutine(m_itemRealignCo);
+		m_itemRealignCo = null;
+	}
 }

@@ -138,8 +138,9 @@ public class TGUI : MonoBehaviour, UIManager.IUIInitializer
 		UIManager.instance.SetState(UIManager.Layer.Main, c_main_mainPanel);
 	}
 
-	public static void CallRegistryUI()
+	public static void CallRegistryUI(RegistryData data)
 	{
+		instance.m_registry.SetRegistryData(data);
 		UIManager.instance.SetState(UIManager.Layer.Main, c_main_registry);
 	}
 

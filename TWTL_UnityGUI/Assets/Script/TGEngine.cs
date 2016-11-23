@@ -21,6 +21,7 @@ public class TGEngine : MonoBehaviour
 		TGUI.ShowPendingUI();
 
 		TGEngineProcedures.RegisterProcedures();
+		TGRegistryProcedures.RegisterProcedures();
 		TestTrapProcedure.RegisterProcedures();
 
 		var comModule   = TGComModule.instance;

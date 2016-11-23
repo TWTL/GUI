@@ -12,6 +12,8 @@ public class TGMainPanel : BaseUIPanel
 
 	public void OnButtonRegistryUI()
 	{
-		TGUI.CallRegistryUI();
+		//TGUI.CallRegistryUI(null);
+
+		new TGRegistryProcedures.RegistryGetChain().StartChain();
 	}
 }

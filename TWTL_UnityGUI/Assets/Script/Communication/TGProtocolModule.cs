@@ -151,6 +151,9 @@ public class TGProtocolModule : MonoBehaviour
 			meta,
 			value,
 			obj,	// object
+
+			diff,
+			patch,
 		}
 
 		/// <summary>
@@ -277,6 +280,7 @@ public class TGProtocolModule : MonoBehaviour
 			}
 			else if (m_chainResultDel != null)
 			{
+				Debug.Log("FinishOnecall : " + procedurePath);
 				m_chainResultDel(result);
 			}
 		}
