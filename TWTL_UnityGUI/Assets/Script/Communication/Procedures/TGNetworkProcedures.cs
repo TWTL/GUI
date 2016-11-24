@@ -68,6 +68,8 @@ public static class TGNetworkProcedures
 					newData.ProcessImagePath    = entry["ProcessImagePath"].str;
 					newData.IsDangerous			= entry["IsDangerous"].b;
 					newData.Alive				= entry["Alive"].b;
+
+					m_list.Add(newData);
 				}
 			});
 		}
@@ -75,6 +77,7 @@ public static class TGNetworkProcedures
 		public void RequestGet(List<IDataEntry> list)
 		{
 			m_list  = list;
+			m_list.Clear();
 			SimpleRequestGet();
 		}
 
