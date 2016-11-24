@@ -289,8 +289,6 @@ public static class TGRegistryProcedures
 		string                  m_value;
 		bool                    m_remove;
 
-		System.Action           m_finishDel;
-
 		public SingleRegistryPatch(RegistryData.Category category, string name, string value, bool remove)
 		{
 			//m_category  = category;
@@ -332,14 +330,7 @@ public static class TGRegistryProcedures
 
 		protected override void OnChaineeResult(string name, IChainee chainee, bool result)
 		{
-			if (m_finishDel != null)
-				m_finishDel();
-		}
-
-		public SingleRegistryPatch SetFinishDel(System.Action del)
-		{
-			m_finishDel = del;
-			return this;
+			
 		}
 	}
 	

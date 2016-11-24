@@ -38,7 +38,7 @@ public class TGProtocolModule : MonoBehaviour
 
 		List<ChaineeInfo>	m_chainees	= new List<ChaineeInfo>();
 		int					m_nextChainIndex;
-
+		System.Action       m_finishDel;
 
 
 		private bool AcquireChainees()
@@ -94,6 +94,12 @@ public class TGProtocolModule : MonoBehaviour
 			}
 		}
 
+		public BaseProcedureChain SetFinishDel(System.Action del)
+		{
+			m_finishDel = del;
+			return this;
+		}
+
 		protected void AddChainee(string name, IChainee chainee)
 		{
 			m_chainees.Add(new ChaineeInfo() { name = name, chainee = chainee });
@@ -119,6 +125,9 @@ public class TGProtocolModule : MonoBehaviour
 				{
 					chInfo.chainee.FinishChain(this);
 					ReleaseChainees();
+
+					if (m_finishDel != null)
+						m_finishDel();
 				}
 				else
 				{										// ...or keep running
@@ -147,6 +156,9 @@ public class TGProtocolModule : MonoBehaviour
 		{
 			get,
 			set,
+			put,
+			beta,
+
 			status,
 			meta,
 			value,
