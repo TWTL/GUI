@@ -178,7 +178,7 @@ public static class TGPerfProcedures
 					procRemoveExecImage.RequestSet(procResolveImagePath.lastResult);
 					break;
 
-				case "autokill":
+				case "remove":
 					TGUI.HidePendingUI();
 					break;
 

@@ -16,4 +16,9 @@ public class TGMainPanel : BaseUIPanel
 
 		new TGRegistryProcedures.RegistryGetChain().StartChain();
 	}
+
+	public void OnButtonNetworkUI()
+	{
+		new TGNetworkProcedures.NetworkConnectionsChain().StartChain();
+	}
 }

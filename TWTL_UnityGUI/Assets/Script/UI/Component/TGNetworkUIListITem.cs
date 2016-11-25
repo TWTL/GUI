@@ -3,7 +3,7 @@ using System.Collections;
 using System;
 using UnityEngine.UI;
 
-public class TGNetworkUIListItem : DynamicUIListItem<TGNetworkProcedures.IDataEntry>
+public class TGNetworkUIListITem : DynamicUIListItem<TGNetworkProcedures.IDataEntry>
 {
 	// Properties
 
@@ -32,6 +32,8 @@ public class TGNetworkUIListItem : DynamicUIListItem<TGNetworkProcedures.IDataEn
 		m_imagePath.text    = param.ProcessImagePath;
 		m_pid.text          = param.PID.ToString();
 		m_isAlive.text      = param.Alive ? "현재 접속됨!!" : "접속 끊김";
+		m_isAlive.color     = param.Alive ? Color.red : Color.grey;
+		m_isAlive.fontSize  = param.Alive ? 32 : 28;
 	}
 
 	public void OnBtnClick()

@@ -77,6 +77,7 @@ public class TGRegistryPanel : BaseUIPanel
 	protected override void OnCloseTransitionEnd()
 	{
 		m_regList.ClearAll();
+		m_data  = null;
 	}
 
 	public void SetRegistryData(RegistryData data)

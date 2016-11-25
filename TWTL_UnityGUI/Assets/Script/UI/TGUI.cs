@@ -57,6 +57,7 @@ public class TGUI : MonoBehaviour, UIManager.IUIInitializer
 
 	const string    c_main_mainPanel    = "main";
 	const string    c_main_registry     = "registry";
+	const string    c_main_network      = "network";
 	const string    c_sub_pending		= "pending";
 	const string    c_sub_message		= "message";
 	const string    c_sub_trapMessage   = "trapmessage";
@@ -69,6 +70,8 @@ public class TGUI : MonoBehaviour, UIManager.IUIInitializer
 	TGMainPanel			m_main;
 	[SerializeField]
 	TGRegistryPanel		m_registry;
+	[SerializeField]
+	TGNetworkPanel      m_network;
 	[SerializeField]
 	UIDynamicCamera		m_uicam;
 	[SerializeField]
@@ -97,9 +100,12 @@ public class TGUI : MonoBehaviour, UIManager.IUIInitializer
 		m_uicam.AddPanelPosition(c_main_mainPanel, m_main);
 		uiMgr.AddDialog(m_registry, UIManager.Layer.Main, c_main_registry);
 		m_uicam.AddPanelPosition(c_main_registry, m_registry);
+		uiMgr.AddDialog(m_network, UIManager.Layer.Main, c_main_network);
+		m_uicam.AddPanelPosition(c_main_network, m_network);
 
 		uiMgr.SetDialogTransitionFromRoot(UIManager.Layer.Main, c_main_mainPanel);
 		uiMgr.SetDialogTransitionBi(UIManager.Layer.Main, c_main_mainPanel, c_main_registry);
+		uiMgr.SetDialogTransitionBi(UIManager.Layer.Main, c_main_mainPanel, c_main_network);
 		//
 
 		uiMgr.AddDialog(m_pendingPanel, UIManager.Layer.Sub, c_sub_pending);
@@ -142,6 +148,12 @@ public class TGUI : MonoBehaviour, UIManager.IUIInitializer
 	{
 		instance.m_registry.SetRegistryData(data);
 		UIManager.instance.SetState(UIManager.Layer.Main, c_main_registry);
+	}
+
+	public static void CallNetworkUI(TGNetworkProcedures.IDataEntry [] data)
+	{
+		instance.m_network.SetData(data);
+		UIManager.instance.SetState(UIManager.Layer.Main, c_main_network);
 	}
 
 	public static IMessagePanelBuilder GetTrapMessagePanelBuilder()

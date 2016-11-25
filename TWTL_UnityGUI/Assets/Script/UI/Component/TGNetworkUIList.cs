@@ -1,16 +1,16 @@
 ﻿using UnityEngine;
 using System.Collections;
 
-public class TGNetworkUIList : DynamicUIList<TGNetworkUIListItem, TGNetworkProcedures.IDataEntry>
+public class TGNetworkUIList : DynamicUIList<TGNetworkUIListITem, TGNetworkProcedures.IDataEntry>
 {
-	public event System.Action<TGNetworkUIListItem>    itemClicked;
+	public event System.Action<TGNetworkUIListITem>    itemClicked;
 
 	protected override void Initialize()
 	{
-		itemHeight  = 150;
+		itemHeight  = 200;
 	}
 
-	protected override void OnAfterItemCreate(TGNetworkUIListItem item)
+	protected override void OnAfterItemCreate(TGNetworkUIListITem item)
 	{
 		item.clicked    += () =>
 		{
@@ -18,7 +18,7 @@ public class TGNetworkUIList : DynamicUIList<TGNetworkUIListItem, TGNetworkProce
 		};
 	}
 
-	private void OnItemClick(TGNetworkUIListItem item)
+	private void OnItemClick(TGNetworkUIListITem item)
 	{
 		if (itemClicked != null)
 			itemClicked(item);

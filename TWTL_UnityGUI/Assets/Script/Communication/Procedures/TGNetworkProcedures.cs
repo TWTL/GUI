@@ -115,7 +115,7 @@ public static class TGNetworkProcedures
 			dataGenerated   = m_tempList.ToArray();
 			m_tempList      = null;
 
-			// TODO : show ui
+			TGUI.CallNetworkUI(dataGenerated);
 		}
 	}
 	//
