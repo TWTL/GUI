@@ -59,7 +59,8 @@ public class TGNetworkPanel : BaseUIPanel
 
 	protected override void OnCloseTransitionEnd()
 	{
-		
+		m_netList.ClearAll();
+		m_netDataArray = null;
 	}
 
 	public void SetData(TGNetworkProcedures.IDataEntry [] data)
