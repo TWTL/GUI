@@ -26,6 +26,8 @@ public class TGEngine : MonoBehaviour
 		TGNetworkProcedures.RegisterProcedures();
 		TGPerfProcedures.RegisterProcedures();
 
+		TGTrapProcedures.RegisterProcedures();
+
 		var comModule   = TGComModule.instance;
 		comModule.StartRequestConnection(ReqConnectionCallback);
 	}

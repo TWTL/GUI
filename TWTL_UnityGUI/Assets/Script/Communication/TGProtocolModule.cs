@@ -166,6 +166,10 @@ public class TGProtocolModule : MonoBehaviour
 
 			diff,
 			patch,
+
+			// Trap
+			change,
+			check,
 		}
 
 		/// <summary>
@@ -372,6 +376,7 @@ public class TGProtocolModule : MonoBehaviour
 	const string                c_keyFunction		= "type";
 	const string                c_keyPath			= "path";
 	const string                c_keyData			= "value";
+	const string                c_keyTrapAckData    = "ready";
 
 	const string                c_packTypeRequest   = "request";
 	const string                c_packTypeResponse  = "response";
@@ -558,7 +563,7 @@ public class TGProtocolModule : MonoBehaviour
 		var callObj         = new JSONObject();
 		callObj.AddField(c_keyFunction, string.Format("{0}.{1}", isTrap ? c_packTypeTrapAnswer : c_packTypeRequest, type));
 		callObj.AddField(c_keyPath, path);
-		callObj.AddField(c_keyData, param);
+		callObj.AddField(isTrap? c_keyTrapAckData : c_keyData, param);
 
 		var content         = new JSONObject[] { callObj };
 		packed.AddField(c_keyContent, new JSONObject(content));

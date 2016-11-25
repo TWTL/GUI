@@ -106,6 +106,9 @@ public class TGUI : MonoBehaviour, UIManager.IUIInitializer
 		uiMgr.SetDialogTransitionFromRoot(UIManager.Layer.Main, c_main_mainPanel);
 		uiMgr.SetDialogTransitionBi(UIManager.Layer.Main, c_main_mainPanel, c_main_registry);
 		uiMgr.SetDialogTransitionBi(UIManager.Layer.Main, c_main_mainPanel, c_main_network);
+
+		// allow transition between panels
+		uiMgr.SetDialogTransitionBi(UIManager.Layer.Main, c_main_registry, c_main_network);
 		//
 
 		uiMgr.AddDialog(m_pendingPanel, UIManager.Layer.Sub, c_sub_pending);

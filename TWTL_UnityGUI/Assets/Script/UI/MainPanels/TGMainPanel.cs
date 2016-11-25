@@ -11,7 +11,7 @@ public class TGMainPanel : BaseUIPanel
 
 
 		// TEST
-		StartCoroutine(co_test());
+		//StartCoroutine(co_test());
 	}
 
 	IEnumerator co_test()
