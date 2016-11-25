@@ -384,11 +384,15 @@ public class TGProtocolModule : MonoBehaviour
 	const string                c_appNameServer		= "TWTL-Engine";
 	const string                c_appName			= "TWTL";
 
-	
+
+	const string                c_procPrefixRequest = "R:";
+	const string                c_procPrefixTrap	= "T:";
+
+
 
 	// Members
 
-	struct ProcedureInfo
+	class ProcedureInfo
 	{
 		public BaseProcedure	procedure;
 		public bool				isTrap;			// whether this procedure is for trap calls
@@ -440,7 +444,9 @@ public class TGProtocolModule : MonoBehaviour
 			procedure       = proc,
 			isTrap          = isTrap,
 		};
-		m_procDict[proc.procedurePath]    = info;
+		var fullProcName    = (isTrap? c_procPrefixTrap : c_procPrefixRequest) + proc.procedurePath;
+
+		m_procDict[fullProcName]	= info;
 		proc.SetMessageDelegate((type, ppath, param) =>
 		{
 			var trap        = isTrap;
@@ -516,8 +522,9 @@ public class TGProtocolModule : MonoBehaviour
 			var func        = funcsplit[1];
 			var path        = entry[c_keyPath].str;
 			var data        = entry.HasField(c_keyData)? entry[c_keyData] : null;
-			
-			if (!m_procDict.TryGetValue(path, out proc))														// path validation
+
+			proc            = GetProcInfo(path, type == c_packTypeTrap);
+			if (proc == null)																					// path validation
 			{
 				Debug.LogError("received packet - invalid path : " + path);
 			}
@@ -570,8 +577,16 @@ public class TGProtocolModule : MonoBehaviour
 		}
 	}
 
-	public BaseProcedure GetProcedureObject(string path)
+	private ProcedureInfo GetProcInfo(string path, bool isTrap)
 	{
-		return m_procDict[path].procedure;
+		var fullPath		= (isTrap? c_procPrefixTrap : c_procPrefixRequest) + path;
+		ProcedureInfo info	= null;
+		m_procDict.TryGetValue(fullPath, out info);
+		return info;
+	}
+
+	public BaseProcedure GetProcedureObject(string path, bool isTrap)
+	{
+		return GetProcInfo(path, isTrap).procedure;
 	}
 }
