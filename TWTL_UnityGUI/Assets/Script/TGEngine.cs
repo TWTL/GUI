@@ -28,17 +28,6 @@ public class TGEngine : MonoBehaviour
 
 		var comModule   = TGComModule.instance;
 		comModule.StartRequestConnection(ReqConnectionCallback);
-
-		// TEST
-		//StartCoroutine(co_Test());
-	}
-
-	IEnumerator co_Test()
-	{
-		TGUI.ShowPendingUI();
-		yield return new WaitForSeconds(2);
-		TGUI.HidePendingUI();
-		TGUI.CallMainUI();
 	}
 
 	void ReqConnectionCallback(TGComModule.Status status)
@@ -73,9 +62,10 @@ public class TGEngine : MonoBehaviour
 		else
 		{
 			// we're all done, so......
-
-			TGUI.HidePendingUI();
-			TGUI.CallMainUI(); // NOTE : we need fancy splashscreen here right before calling main panel.
+			
+			TGUI.ShowIntro();
+			//TGUI.HidePendingUI();
+			//TGUI.CallMainUI(); // NOTE : we need fancy splashscreen here right before calling main panel.
 		}
 	}
 

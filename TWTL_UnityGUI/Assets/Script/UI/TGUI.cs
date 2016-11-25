@@ -134,6 +134,15 @@ public class TGUI : MonoBehaviour, UIManager.IUIInitializer
 		UIManager.instance.SetState(UIManager.Layer.Sub, UIManager.c_rootStateName);
 	}
 
+	public static void ShowIntro()
+	{
+		instance.m_pendingPanel.ShowOpening(() =>
+		{
+			HidePendingUI();
+			CallMainUI();
+		});
+	}
+
 	public static IMessagePanelBuilder GetMessagePanelBuilder()
 	{
 		return new MessagePanelBuilder(instance, false);
