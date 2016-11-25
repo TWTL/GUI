@@ -568,7 +568,7 @@ public class TGProtocolModule : MonoBehaviour
 		var content         = new JSONObject[] { callObj };
 		packed.AddField(c_keyContent, new JSONObject(content));
 
-		var message         = packed.ToString(true); // TEST : pretty
+		var message         = packed.ToString();
 		var comModule       = TGComModule.instance;
 		if (isTrap)
 		{

@@ -36,7 +36,7 @@ public static class TGTrapProcedures
 		{
 			get
 			{
-				return "/Reg/Connections/";
+				return "/Reg/Short/";
 			}
 		}
 
