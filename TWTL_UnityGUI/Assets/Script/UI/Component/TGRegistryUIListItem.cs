@@ -31,7 +31,7 @@ public class TGRegistryUIListItem : DynamicUIListItem<TGRegistryUIListItem.Param
 	{
 		m_textCategory.text = param.category.ToString();
 		m_textName.text     = param.name;
-		m_textValue.text    = "= " + param.value;
+		m_textValue.text    = param.value != null? ("= " + param.value) : "";
 	}
 
 	public void OnBtnClick()

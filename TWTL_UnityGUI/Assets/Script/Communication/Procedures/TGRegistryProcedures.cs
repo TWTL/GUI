@@ -104,8 +104,20 @@ public static class TGRegistryProcedures
 				{
 					var entry   = arr[i];
 					var name    = entry["Name"].str;
-					var value   = entry["Value"].str;
-
+					string value;
+					if (!entry.HasField("Value"))
+					{
+						value   = null;
+					}
+					else
+					{
+						var valueObj	= entry["Value"];
+						if (valueObj.IsNull)
+							value	= null;
+						else
+							value   = valueObj.str;
+					}
+					
 					AddEntry(name, value);
 				}
 			});
@@ -124,7 +136,14 @@ public static class TGRegistryProcedures
 
 			var objPair		= new JSONObject();
 			objPair.AddField("Name", name);
-			objPair.AddField("Value", value);
+			if (value != null)
+			{
+				objPair.AddField("Value", value);
+			}
+			else
+			{
+				objPair.AddField("Value", JSONObject.nullJO);
+			}
 
 			param.AddField("value", new JSONObject(new JSONObject[] { objPair }));
 			param.AddField("accept", new JSONObject(new JSONObject[] { new JSONObject(!remove) }));
