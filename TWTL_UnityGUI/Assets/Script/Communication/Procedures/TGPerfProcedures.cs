@@ -92,7 +92,8 @@ public static class TGPerfProcedures
 
 			RegisterFunction(FunctionType.obj, (param) =>
 			{
-				lastResult  = param["ImagePath"].str;
+				//lastResult  = param["ImagePath"].str;
+				lastResult  = param.str;
 			});
 		}
 
